@@ -32,6 +32,20 @@ class LandSeeder extends Seeder
         'Luxury estate development in prime location with guaranteed returns.',
     ];
 
+    // Placeholder images for land/real estate
+    private array $placeholderImages = [
+        'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1513584684374-8bab748fbf90?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1448630360428-65456885c650?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1582407947304-fd86f028f716?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1605146769289-440113cc3d00?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&h=600&fit=crop',
+    ];
+
     public function run(): void
     {
         // Copy images from database/seeders/images/lands to storage/app/public/seed/lands
@@ -42,14 +56,16 @@ class LandSeeder extends Seeder
             ->map(fn($path) => str_replace('public/', '', $path))
             ->values();
 
-        if ($images->isEmpty()) {
-            $this->command->warn('No seed images found. Seeding without images.');
+        $useLocalImages = $images->isNotEmpty();
+
+        if ($useLocalImages) {
+            $this->command->info("Found {$images->count()} local seed images");
         } else {
-            $this->command->info("Found {$images->count()} seed images");
+            $this->command->warn('No local seed images found. Using placeholder URLs.');
         }
 
         for ($i = 1; $i <= 10; $i++) {
-            DB::transaction(function () use ($images, $i) {
+            DB::transaction(function () use ($images, $useLocalImages, $i) {
                 
                 // Generate Lagos-like random coordinates
                 $lat = $this->randomFloat(6, 6.40, 6.65);
@@ -88,7 +104,8 @@ class LandSeeder extends Seeder
                     [$wkt, $land->id]
                 );
 
-                $pricePerUnit = $this->randomInt(300_000, 800_000);
+                // Price in kobo (₦300k - ₦800k = 30M - 80M kobo)
+                $pricePerUnit = $this->randomInt(30_000_000, 80_000_000);
                 
                 LandPriceHistory::create([
                     'land_id' => $land->id,
@@ -96,14 +113,26 @@ class LandSeeder extends Seeder
                     'price_date' => now()->toDateString(),
                 ]);
 
-                // Attach images
-                if ($images->isNotEmpty()) {
+                // Attach images (local or placeholder)
+                if ($useLocalImages) {
+                    // Use local images
                     $imageCount = min(3, $images->count());
                     $selectedImages = $images->random($imageCount);
 
                     foreach ($selectedImages as $img) {
                         $land->images()->create([
                             'image_path' => $img
+                        ]);
+                    }
+                } else {
+                    // Use placeholder URLs
+                    $imageCount = 3;
+                    $startIndex = ($i - 1) * 3;
+                    
+                    for ($j = 0; $j < $imageCount; $j++) {
+                        $placeholderIndex = ($startIndex + $j) % count($this->placeholderImages);
+                        $land->images()->create([
+                            'image_path' => $this->placeholderImages[$placeholderIndex]
                         ]);
                     }
                 }
@@ -122,7 +151,7 @@ class LandSeeder extends Seeder
         $targetDir = storage_path('app/public/seed/lands');
 
         if (!File::exists($sourceDir) || !File::isDirectory($sourceDir)) {
-            $this->command->warn("Source directory not found: {$sourceDir}");
+            $this->command->info("Source directory not found: {$sourceDir} - will use placeholder URLs");
             return;
         }
 
@@ -136,7 +165,7 @@ class LandSeeder extends Seeder
         $sourceFiles = File::files($sourceDir);
         
         if (empty($sourceFiles)) {
-            $this->command->warn("No images found in: {$sourceDir}");
+            $this->command->info("No images found in: {$sourceDir} - will use placeholder URLs");
             return;
         }
 
