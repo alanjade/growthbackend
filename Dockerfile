@@ -2,7 +2,7 @@ FROM php:8.3-cli
 
 WORKDIR /var/www/html
 
-# Install system dependencies
+# Install system dependencies including PostGIS
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxml2-dev \
     libzip-dev \
     libpq-dev \
+    postgresql-client \
     && docker-php-ext-install pdo pdo_pgsql mbstring exif pcntl bcmath gd zip \
     && pecl install redis \
     && docker-php-ext-enable redis \
@@ -22,24 +23,29 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copy project
+# Copy project files
 COPY . .
 
 # Install PHP dependencies
-RUN composer install --optimize-autoloader
+RUN composer install --optimize-autoloader --no-dev
 
-# Ensure correct permissions
-RUN chmod -R 775 storage bootstrap/cache
+# Ensure storage directories exist with correct permissions
+RUN mkdir -p storage/app/public/seed/lands \
+    && mkdir -p storage/framework/{cache,sessions,views} \
+    && mkdir -p storage/logs \
+    && mkdir -p bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
 
-# Create storage symlink during build (safe)
-RUN php artisan storage:link || true
+COPY storage/app/public/seed/lands storage/app/public/seed/lands/
 
 EXPOSE 8000
 
-# Production startup command
+# Startup command for Render
 CMD php artisan config:clear && \
     php artisan cache:clear && \
+    php artisan storage:link && \
     php artisan config:cache && \
+    php artisan route:cache && \
     php artisan migrate --force && \
     php artisan db:seed --force && \
-    php artisan serve --host=0.0.0.0 --port=${PORT}
+    php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
