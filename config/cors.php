@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [env('FRONTEND_URL', 'https://growthfrontends.vercel.app', 'http://localhost:5173')],
+    'allowed_origins' => [env('FRONTEND_URL', 'https://growthfrontends.vercel.app')],
 
     'allowed_origins_patterns' => [],
 
