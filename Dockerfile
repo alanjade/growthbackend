@@ -28,13 +28,18 @@ COPY . .
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Permissions
+# Ensure correct permissions
 RUN chmod -R 775 storage bootstrap/cache
+
+# Create storage symlink during build (safe)
+RUN php artisan storage:link || true
 
 EXPOSE 8000
 
-# Run migrations + seed + start server
-CMD php artisan migrate --force && \
+# Production startup command
+CMD php artisan config:clear && \
+    php artisan cache:clear && \
+    php artisan config:cache && \
+    php artisan migrate --force && \
     php artisan db:seed --force && \
-    php artisan storage:link && \
     php artisan serve --host=0.0.0.0 --port=${PORT}
