@@ -15,6 +15,12 @@ class LandImage extends Model
 
     public function getImageUrlAttribute()
     {
+        // If it's already a full URL (http:// or https://), return as-is
+        if (str_starts_with($this->image_path, 'http://') || str_starts_with($this->image_path, 'https://')) {
+            return $this->image_path;
+        }
+        
+        // Otherwise, use storage path for local files
         return asset('storage/' . $this->image_path);
     }
     
