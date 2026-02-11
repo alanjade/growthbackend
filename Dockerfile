@@ -1,9 +1,8 @@
-FROM php:8.3-fpm
+FROM php:8.3-cli
 
 WORKDIR /var/www/html
-ENV HOME=/var/www/html
 
-# Install system dependencies
+# Install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
@@ -14,7 +13,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxml2-dev \
     libzip-dev \
     libpq-dev \
-    supervisor \
     && docker-php-ext-install pdo pdo_pgsql mbstring exif pcntl bcmath gd zip \
     && pecl install redis \
     && docker-php-ext-enable redis \
@@ -24,13 +22,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copy entire project INCLUDING vendor
+# Copy project
 COPY . .
 
-# Fix permissions
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 775 storage bootstrap/cache
+# Install dependencies properly
+RUN composer install --no-dev --optimize-autoloader
 
-USER www-data
+# Permissions
+RUN chmod -R 775 storage bootstrap/cache
 
-CMD ["php-fpm"]
+EXPOSE 8000
+
+CMD php artisan serve --host=0.0.0.0 --port=${PORT}
