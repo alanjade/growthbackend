@@ -17,7 +17,7 @@ class LandSeeder extends Seeder
 
             // Delete all previous lands and related data
             DB::table('land_images')->truncate();
-            DB::table('land_price_histories')->truncate();
+            DB::table('land_price_history')->truncate();
             DB::table('lands')->truncate();
 
         });
