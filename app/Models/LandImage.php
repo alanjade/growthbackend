@@ -17,4 +17,9 @@ class LandImage extends Model
     {
         return asset('storage/' . $this->image_path);
     }
+    
+    public function land()
+    {
+        return $this->belongsTo(Land::class);
+    }
 }
