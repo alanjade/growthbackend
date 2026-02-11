@@ -13,10 +13,14 @@ class LandSeeder extends Seeder
 {
     public function run(): void
     {
-        // Prevent reseeding in production
-        if (Land::count() > 0) {
-            return;
-        }
+        DB::transaction(function () {
+
+            // Delete all previous lands and related data
+            DB::table('land_images')->truncate();
+            DB::table('land_price_histories')->truncate();
+            DB::table('lands')->truncate();
+
+        });
 
         $seedPath = database_path('seeders/images/lands');
 
@@ -28,7 +32,6 @@ class LandSeeder extends Seeder
 
             DB::transaction(function () use ($images, $i) {
 
-                // Lagos-like coordinates
                 $lat = fake()->randomFloat(6, 6.40, 6.65);
                 $lng = fake()->randomFloat(6, 3.20, 3.65);
 
@@ -50,9 +53,7 @@ class LandSeeder extends Seeder
                     'is_available' => true,
                 ]);
 
-                // Create small polygon square
                 $offset = 0.002;
-
                 $wkt = "POLYGON((
                     " . ($lng - $offset) . " " . ($lat - $offset) . ",
                     " . ($lng + $offset) . " " . ($lat - $offset) . ",
@@ -66,24 +67,19 @@ class LandSeeder extends Seeder
                     [$wkt, $land->id]
                 );
 
-                // Create 3 price history records (more realistic)
+                // Price history
                 for ($m = 3; $m >= 0; $m--) {
                     LandPriceHistory::create([
                         'land_id' => $land->id,
-                        'price_per_unit_kobo' => fake()->numberBetween(200000, 800000),
+                        'price_per_unit_kobo' => fake()->numberBetween(300000000, 800000000),
                         'price_date' => now()->subMonths($m)->toDateString(),
                     ]);
                 }
 
                 // Attach 1–3 images
                 if ($images->count() > 0) {
-
-                    $selectedImages = $images->random(
-                        min(3, $images->count())
-                    );
-
+                    $selectedImages = $images->random(min(3, $images->count()));
                     foreach ((array) $selectedImages as $imgPath) {
-
                         $storedPath = Storage::disk('public')->putFile(
                             'land_images',
                             new File($imgPath)
