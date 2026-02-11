@@ -109,7 +109,7 @@ class LandSeeder extends Seeder
                 );
 
                 // Price in kobo (₦300k - ₦800k = 30M - 80M kobo)
-                $pricePerUnit = $this->randomInt(30_000_000, 80_000_000);
+                $pricePerUnit = $this->randomInt(300_000, 800_000);
                 
                 LandPriceHistory::create([
                     'land_id' => $land->id,
