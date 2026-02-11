@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\File;
 use App\Models\Land;
 use App\Models\LandPriceHistory;
 
@@ -33,7 +34,10 @@ class LandSeeder extends Seeder
 
     public function run(): void
     {
-        // Get all seed images
+        // Copy images from database/seeders/images/lands to storage/app/public/seed/lands
+        $this->copySeederImagesToStorage();
+
+        // Get all seed images from storage
         $images = collect(Storage::files('public/seed/lands'))
             ->map(fn($path) => str_replace('public/', '', $path))
             ->values();
@@ -107,6 +111,49 @@ class LandSeeder extends Seeder
         }
 
         $this->command->info('Successfully seeded 10 land records');
+    }
+
+    /**
+     * Copy images from database/seeders/images/lands to storage/app/public/seed/lands
+     */
+    private function copySeederImagesToStorage(): void
+    {
+        $sourceDir = database_path('seeders/images/lands');
+        $targetDir = storage_path('app/public/seed/lands');
+
+        if (!File::exists($sourceDir) || !File::isDirectory($sourceDir)) {
+            $this->command->warn("Source directory not found: {$sourceDir}");
+            return;
+        }
+
+        // Ensure target directory exists
+        if (!File::exists($targetDir)) {
+            File::makeDirectory($targetDir, 0775, true);
+            $this->command->info("Created target directory: {$targetDir}");
+        }
+
+        // Get all image files from source
+        $sourceFiles = File::files($sourceDir);
+        
+        if (empty($sourceFiles)) {
+            $this->command->warn("No images found in: {$sourceDir}");
+            return;
+        }
+
+        $copiedCount = 0;
+        foreach ($sourceFiles as $file) {
+            // Only copy image files
+            $extension = strtolower($file->getExtension());
+            if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                $targetPath = $targetDir . '/' . $file->getFilename();
+                
+                // Copy file (overwrite if exists to ensure fresh copies)
+                File::copy($file->getPathname(), $targetPath);
+                $copiedCount++;
+            }
+        }
+
+        $this->command->info("Copied {$copiedCount} images from database/seeders/images/lands to storage");
     }
 
     // Helper methods to replace Faker

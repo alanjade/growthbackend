@@ -36,7 +36,10 @@ RUN mkdir -p storage/app/public/seed/lands \
     && mkdir -p bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-COPY storage/app/public/seed/lands storage/app/public/seed/lands/
+# Copy seed images from database/seeders/images/lands to storage/app/public/seed/lands
+RUN if [ -d "database/seeders/images/lands" ]; then \
+        cp -r database/seeders/images/lands/* storage/app/public/seed/lands/ 2>/dev/null || true; \
+    fi
 
 EXPOSE 8000
 
