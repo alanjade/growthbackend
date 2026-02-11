@@ -70,7 +70,7 @@ class LandSeeder extends Seeder
                 for ($m = 3; $m >= 0; $m--) {
                     LandPriceHistory::create([
                         'land_id' => $land->id,
-                        'price_per_unit_kobo' => fake()->numberBetween(300000000, 800000000),
+                        'price_per_unit_kobo' => fake()->numberBetween(200000, 800000),
                         'price_date' => now()->subMonths($m)->toDateString(),
                     ]);
                 }
