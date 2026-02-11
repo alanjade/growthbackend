@@ -5,54 +5,48 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Http\File;
 use App\Models\Land;
 use App\Models\LandPriceHistory;
+use Faker\Factory as Faker;
 
 class LandSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::transaction(function () {
+        $faker = Faker::create();
 
-            // Delete all previous lands and related data
-            DB::table('land_images')->truncate();
-            DB::table('land_price_history')->truncate();
-            DB::table('lands')->truncate();
-
-        });
-
-        $seedPath = database_path('seeders/images/lands');
-
-        $images = collect(
-            glob($seedPath . '/*.{jpg,jpeg,png}', GLOB_BRACE)
-        );
+        // Get all seed images
+        $images = collect(Storage::files('public/seed/lands'))
+            ->map(fn($path) => str_replace('public/', '', $path))
+            ->values();
 
         for ($i = 1; $i <= 10; $i++) {
 
-            DB::transaction(function () use ($images, $i) {
+            DB::transaction(function () use ($images, $i, $faker) {
 
-                $lat = fake()->randomFloat(6, 6.40, 6.65);
-                $lng = fake()->randomFloat(6, 3.20, 3.65);
+                // Generate Lagos-like random coordinates
+                $lat = $faker->randomFloat(6, 6.40, 6.65);
+                $lng = $faker->randomFloat(6, 3.20, 3.65);
 
                 $land = Land::create([
                     'title' => "Premium Estate Plot $i",
-                    'location' => fake()->randomElement([
+                    'location' => $faker->randomElement([
                         'Ibeju-Lekki',
                         'Epe',
                         'Ajah',
                         'Sangotedo',
                         'Abijo'
                     ]) . ', Lagos',
-                    'size' => fake()->randomElement([300, 450, 600]),
+                    'size' => $faker->randomElement([300, 450, 600]),
                     'total_units' => 50,
-                    'available_units' => fake()->numberBetween(10, 50),
-                    'description' => fake()->sentence(12),
+                    'available_units' => $faker->numberBetween(1000, 2500),
+                    'description' => $faker->sentence(12),
                     'lat' => $lat,
                     'lng' => $lng,
                     'is_available' => true,
                 ]);
 
+                // Create Polygon (small square around point)
                 $offset = 0.002;
                 $wkt = "POLYGON((
                     " . ($lng - $offset) . " " . ($lat - $offset) . ",
@@ -68,27 +62,19 @@ class LandSeeder extends Seeder
                 );
 
                 // Price history
-                for ($m = 3; $m >= 0; $m--) {
-                    LandPriceHistory::create([
-                        'land_id' => $land->id,
-                        'price_per_unit_kobo' => fake()->numberBetween(300000000, 800000000),
-                        'price_date' => now()->subMonths($m)->toDateString(),
+                LandPriceHistory::create([
+                    'land_id' => $land->id,
+                    'price_per_unit_kobo' => $faker->numberBetween(300_000, 800_000),
+                    'price_date' => now()->toDateString(),
+                ]);
+
+                // Attach 1–3 random images
+                $selectedImages = $images->random(min(3, $images->count()));
+
+                foreach ((array) $selectedImages as $img) {
+                    $land->images()->create([
+                        'image_path' => $img
                     ]);
-                }
-
-                // Attach 1–3 images
-                if ($images->count() > 0) {
-                    $selectedImages = $images->random(min(3, $images->count()));
-                    foreach ((array) $selectedImages as $imgPath) {
-                        $storedPath = Storage::disk('public')->putFile(
-                            'land_images',
-                            new File($imgPath)
-                        );
-
-                        $land->images()->create([
-                            'image_path' => $storedPath
-                        ]);
-                    }
                 }
             });
         }
