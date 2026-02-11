@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\File;
 use App\Models\Land;
+use App\Models\LandImage;
 use App\Models\LandPriceHistory;
 
 class LandSeeder extends Seeder
@@ -48,6 +49,9 @@ class LandSeeder extends Seeder
 
     public function run(): void
     {
+        // Clear existing land data
+        $this->clearExistingData();
+
         // Copy images from database/seeders/images/lands to storage/app/public/seed/lands
         $this->copySeederImagesToStorage();
 
@@ -140,6 +144,28 @@ class LandSeeder extends Seeder
         }
 
         $this->command->info('Successfully seeded 10 land records');
+    }
+
+    /**
+     * Clear existing land data before seeding
+     */
+    private function clearExistingData(): void
+    {
+        $this->command->info('Clearing existing land data...');
+        
+        // Delete in correct order to respect foreign key constraints
+        LandImage::query()->delete();
+        LandPriceHistory::query()->delete();
+        
+        // If you have other related tables, delete them here
+        // DB::table('purchases')->delete();
+        // DB::table('transactions')->delete();
+        // DB::table('user_land')->delete();
+        // DB::table('portfolio_land_snapshots')->delete();
+        
+        Land::query()->delete();
+        
+        $this->command->info('Existing land data cleared successfully');
     }
 
     /**
