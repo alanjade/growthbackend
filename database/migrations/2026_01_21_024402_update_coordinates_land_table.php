@@ -1,22 +1,19 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration {
     public function up()
     {
-        // Ensure PostGIS exists
         DB::statement('CREATE EXTENSION IF NOT EXISTS postgis');
 
-        // Add new geometry column
         Schema::table('lands', function (Blueprint $table) {
-            $table->point('coordinates_new', 4326)->nullable();
+            $table->geometry('coordinates_new', 'POINT', 4326)->nullable();
         });
 
-        // Convert existing data (only if not null)
         DB::statement("
             UPDATE lands
             SET coordinates_new = ST_SetSRID(
@@ -29,13 +26,8 @@ return new class extends Migration {
             WHERE coordinates IS NOT NULL
         ");
 
-        // Drop old column
         Schema::table('lands', function (Blueprint $table) {
             $table->dropColumn('coordinates');
-        });
-
-        // Rename new column
-        Schema::table('lands', function (Blueprint $table) {
             $table->renameColumn('coordinates_new', 'coordinates');
         });
     }
@@ -43,15 +35,15 @@ return new class extends Migration {
     public function down()
     {
         Schema::table('lands', function (Blueprint $table) {
-            $table->point('coordinates_old')->nullable();
+            $table->float('coordinates_old', 2)->nullable();
         });
 
         DB::statement("
             UPDATE lands
-            SET coordinates_old = POINT(
+            SET coordinates_old = ARRAY[
                 ST_X(coordinates),
                 ST_Y(coordinates)
-            )
+            ]
             WHERE coordinates IS NOT NULL
         ");
 
