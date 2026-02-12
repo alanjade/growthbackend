@@ -19,7 +19,10 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [env('FRONTEND_URL', 'https://growthfrontends.vercel.app')],
+     'allowed_origins' => [
+        'https://growthfrontends.vercel.app',
+        'https://react-iota-taupe.vercel.app',
+    ],
 
     'allowed_origins_patterns' => [],
 
