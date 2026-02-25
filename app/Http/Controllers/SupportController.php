@@ -13,15 +13,15 @@ use Illuminate\Support\Str;
 
 class SupportController extends Controller
 {
-    // ─────────────────────────────────────────────────────────────────────────
-    // AI CHAT  POST /api/support/chat
-    // Body: { messages: [{role, content}], context?: string }
-    // ─────────────────────────────────────────────────────────────────────────
+    // ===========================================================================
+    // AI CHAT  POST /api/support/chat  (auth required)
+    // Body: { messages: [{role, content}] }
+    // ===========================================================================
     public function chat(Request $request)
     {
         $request->validate([
-            'messages'        => 'required|array|min:1',
-            'messages.*.role' => 'required|in:user,assistant',
+            'messages'           => 'required|array|min:1',
+            'messages.*.role'    => 'required|in:user,assistant',
             'messages.*.content' => 'required|string|max:2000',
         ]);
 
@@ -58,30 +58,78 @@ PROMPT;
             'anthropic-version' => '2023-06-01',
             'Content-Type'      => 'application/json',
         ])->post('https://api.anthropic.com/v1/messages', [
-            'model'      => 'claude-haiku-4-5-20251001',
+            'model'    => 'claude-haiku-4-5-20251001',
             'max_tokens' => 600,
-            'system'     => $systemPrompt,
-            'messages'   => $request->messages,
+            'system'   => $systemPrompt,
+            'messages' => $request->messages,
         ]);
 
         if ($response->failed()) {
             return response()->json([
                 'success' => false,
-                'message' => 'AI service temporarily unavailable. Please try again or submit a ticket.',
+                'message' => 'AI service temporarily unavailable. Please submit a ticket.',
             ], 503);
         }
 
-        $reply = $response->json('content.0.text', 'Sorry, I could not generate a response.');
-
         return response()->json([
             'success' => true,
-            'data'    => ['reply' => $reply],
+            'data'    => ['reply' => $response->json('content.0.text', 'Sorry, I could not generate a response.')],
         ]);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // LIST TICKETS  GET /api/support/tickets
-    // ─────────────────────────────────────────────────────────────────────────
+    // ===========================================================================
+    // GUEST TICKET  POST /api/support/tickets/guest  (no auth)
+    // Body: { name, email, subject, category, message, attachment? }
+    // ===========================================================================
+    public function storeGuestTicket(Request $request)
+    {
+        $request->validate([
+            'name'       => 'required|string|max:100',
+            'email'      => 'required|email|max:150',
+            'subject'    => 'required|string|max:150',
+            'category'   => 'required|in:account,payment,kyc,investment,withdrawal,other',
+            'message'    => 'required|string|max:3000',
+            'attachment' => 'nullable|file|max:5120|mimes:jpg,jpeg,png,pdf',
+        ]);
+
+        $attachmentPath = null;
+        if ($request->hasFile('attachment')) {
+            $attachmentPath = $request->file('attachment')
+                ->store('support-attachments', 'public');
+        }
+
+        $ticket = SupportTicket::create([
+            'user_id'     => null,
+            'guest_name'  => $request->name,
+            'guest_email' => $request->email,
+            'reference'   => 'TKT-' . strtoupper(Str::random(8)),
+            'subject'     => $request->subject,
+            'category'    => $request->category,
+            'status'      => 'open',
+            'priority'    => 'normal',
+        ]);
+
+        SupportMessage::create([
+            'ticket_id'       => $ticket->id,
+            'sender_type'     => 'user',
+            'sender_id'       => null,
+            'body'            => $request->message,
+            'attachment_path' => $attachmentPath,
+        ]);
+
+        // Send confirmation email to guest
+        // Mail::to($request->email)->send(new GuestTicketConfirmation($ticket));
+
+        return response()->json([
+            'success'   => true,
+            'message'   => "Ticket submitted. We'll reply to {$request->email} within 24 hours.",
+            'reference' => $ticket->reference,
+        ], 201);
+    }
+
+    // ===========================================================================
+    // LIST TICKETS  GET /api/support/tickets  (auth required)
+    // ===========================================================================
     public function indexTickets(Request $request)
     {
         $tickets = SupportTicket::where('user_id', $request->user()->id)
@@ -92,10 +140,10 @@ PROMPT;
         return response()->json(['success' => true, 'data' => $tickets]);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // CREATE TICKET  POST /api/support/tickets
+    // ===========================================================================
+    // CREATE TICKET  POST /api/support/tickets  (auth required)
     // Body: { subject, category, message, priority?, attachment? }
-    // ─────────────────────────────────────────────────────────────────────────
+    // ===========================================================================
     public function storeTicket(Request $request)
     {
         $request->validate([
@@ -112,20 +160,23 @@ PROMPT;
                 ->store('support-attachments', 'public');
         }
 
+        $user   = $request->user();
         $ticket = SupportTicket::create([
-            'user_id'   => $request->user()->id,
-            'reference' => 'TKT-' . strtoupper(Str::random(8)),
-            'subject'   => $request->subject,
-            'category'  => $request->category,
-            'status'    => 'open',
-            'priority'  => $request->priority ?? 'normal',
+            'user_id'     => $user->id,
+            'guest_name'  => null,
+            'guest_email' => null,
+            'reference'   => 'TKT-' . strtoupper(Str::random(8)),
+            'subject'     => $request->subject,
+            'category'    => $request->category,
+            'status'      => 'open',
+            'priority'    => $request->priority ?? 'normal',
         ]);
 
         SupportMessage::create([
-            'ticket_id'      => $ticket->id,
-            'sender_type'    => 'user',
-            'sender_id'      => $request->user()->id,
-            'body'           => $request->message,
+            'ticket_id'       => $ticket->id,
+            'sender_type'     => 'user',
+            'sender_id'       => $user->id,
+            'body'            => $request->message,
             'attachment_path' => $attachmentPath,
         ]);
 
@@ -136,26 +187,22 @@ PROMPT;
         ], 201);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // SHOW TICKET  GET /api/support/tickets/{ticket}
-    // ─────────────────────────────────────────────────────────────────────────
+    // ===========================================================================
+    // SHOW TICKET  GET /api/support/tickets/{ticket}  (auth required)
+    // ===========================================================================
     public function showTicket(Request $request, SupportTicket $ticket)
     {
-        // Ensure user owns this ticket
         if ($ticket->user_id !== $request->user()->id) {
             return response()->json(['success' => false, 'message' => 'Not found.'], 404);
         }
 
-        return response()->json([
-            'success' => true,
-            'data'    => $ticket->load('messages'),
-        ]);
+        return response()->json(['success' => true, 'data' => $ticket->load('messages')]);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // REPLY TO TICKET  POST /api/support/tickets/{ticket}/reply
+    // ===========================================================================
+    // REPLY  POST /api/support/tickets/{ticket}/reply  (auth required)
     // Body: { message, attachment? }
-    // ─────────────────────────────────────────────────────────────────────────
+    // ===========================================================================
     public function replyTicket(Request $request, SupportTicket $ticket)
     {
         if ($ticket->user_id !== $request->user()->id) {
@@ -181,29 +228,24 @@ PROMPT;
         }
 
         $msg = SupportMessage::create([
-            'ticket_id'      => $ticket->id,
-            'sender_type'    => 'user',
-            'sender_id'      => $request->user()->id,
-            'body'           => $request->message,
+            'ticket_id'       => $ticket->id,
+            'sender_type'     => 'user',
+            'sender_id'       => $request->user()->id,
+            'body'            => $request->message,
             'attachment_path' => $attachmentPath,
         ]);
 
-        // Re-open if it was pending-user-reply
         if ($ticket->status === 'waiting') {
             $ticket->update(['status' => 'open']);
         }
         $ticket->touch();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Reply sent.',
-            'data'    => $msg,
-        ]);
+        return response()->json(['success' => true, 'message' => 'Reply sent.', 'data' => $msg]);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // FAQs  GET /api/support/faqs
-    // ─────────────────────────────────────────────────────────────────────────
+    // ===========================================================================
+    // FAQs  GET /api/support/faqs  (public)
+    // ===========================================================================
     public function faqs()
     {
         $faqs = Cache::remember('support_faqs', 3600, fn () =>

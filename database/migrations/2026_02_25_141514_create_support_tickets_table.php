@@ -9,7 +9,10 @@ return new class extends Migration {
     {
         Schema::create('support_tickets', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            // Nullable so guests (no account) can also submit tickets
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->string('guest_name',  100)->nullable();
+            $table->string('guest_email', 150)->nullable();
             $table->string('reference', 20)->unique();      // TKT-XXXXXXXX
             $table->string('subject', 150);
             $table->enum('category', ['account', 'payment', 'kyc', 'investment', 'withdrawal', 'other'])
