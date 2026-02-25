@@ -11,6 +11,7 @@ use App\Http\Controllers\PortfolioController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaystackWebhookController;
 use App\Http\Controllers\MonnifyWebhookController;
+use App\Http\Controllers\SupportController;
 use App\Http\Controllers\KycController;
 use App\Http\Controllers\ReferralController;
 use App\Http\Middleware\CheckTransactionPin;
@@ -54,6 +55,29 @@ Route::post('/paystack/webhook', [PaystackWebhookController::class, 'handle'])
 Route::post('/monnify/webhook', [MonnifyWebhookController::class, 'handle'])
     ->withoutMiddleware(['auth:api', 'throttle']);
 
+Route::prefix('support')->group(function () {
+
+    // ── AI Chat ──────────────────────────────────────────────────────────────
+    // POST   /api/support/chat          Send a message, get AI reply
+    Route::post('/chat',                [SupportController::class, 'chat']);
+
+    // ── Tickets ──────────────────────────────────────────────────────────────
+    // GET    /api/support/tickets       List user's tickets
+    Route::get('/tickets',              [SupportController::class, 'indexTickets']);
+
+    // POST   /api/support/tickets       Create a ticket (with optional file)
+    Route::post('/tickets',             [SupportController::class, 'storeTicket']);
+
+    // GET    /api/support/tickets/{id}  Single ticket + messages
+    Route::get('/tickets/{ticket}',     [SupportController::class, 'showTicket']);
+
+    // POST   /api/support/tickets/{id}/reply   User reply to ticket
+    Route::post('/tickets/{ticket}/reply', [SupportController::class, 'replyTicket']);
+
+    // ── FAQs ─────────────────────────────────────────────────────────────────
+    // GET    /api/support/faqs          List all FAQs (cached)
+    Route::get('/faqs',                 [SupportController::class, 'faqs']);
+});
 /*
 |--------------------------------------------------------------------------
 | Protected Routes (JWT required)
@@ -112,9 +136,6 @@ Route::middleware('jwt.auth')->group(function () {
         |--------------------------------------------------------------------------
         */
         Route::prefix('lands')->group(function () {
-
-            // FIX 4: /lands/map was nested as /lands/lands/map due to
-            // being inside the 'lands' prefix group. Fixed the path.
             Route::get('/map', [LandController::class, 'mapIndex']);
 
             // Listings & detail
@@ -168,7 +189,6 @@ Route::middleware('jwt.auth')->group(function () {
             Route::post('/verify-code', [UserController::class, 'verifyPinResetCode']);
             Route::post('/forgot',      [UserController::class, 'sendPinResetCode']);
             Route::post('/reset',       [UserController::class, 'resetTransactionPin']);
-            // forgot/verify-code/reset are public (above) — user is logged out when they need them
         });
 
         /*

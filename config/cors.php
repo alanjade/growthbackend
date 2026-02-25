@@ -20,6 +20,7 @@ return [
     'allowed_methods' => ['*'],
 
      'allowed_origins' => [
+        'https://sproutapp-eta.vercel.app',
         'https://growthfrontends.vercel.app',
         'https://react-iota-taupe.vercel.app',
         'http://localhost:3000',
