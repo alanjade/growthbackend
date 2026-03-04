@@ -54,31 +54,6 @@ class TestUserSeeder extends Seeder
             ]
         );
 
-        // Seed some transaction history
-        $txns = [
-            ['type' => 'Deposit',    'amount_kobo' => 200_000_00, 'status' => 'completed',   'days_ago' => 30],
-            ['type' => 'Deposit',    'amount_kobo' => 300_000_00, 'status' => 'completed',   'days_ago' => 20],
-            ['type' => 'Withdrawal', 'amount_kobo' =>  50_000_00, 'status' => 'completed',  'days_ago' => 15],
-            ['type' => 'Deposit',    'amount_kobo' => 100_000_00, 'status' => 'completed', 'days_ago' => 10],
-            ['type' => 'Withdrawal', 'amount_kobo' =>  25_000_00, 'status' => 'pending',    'days_ago' =>  2],
-            ['type' => 'Deposit',    'amount_kobo' =>  75_000_00, 'status' => 'failed',   'days_ago' =>  1],
-        ];
-
-        foreach ($txns as $t) {
-            Transaction::updateOrCreate(
-                [
-                    'user_id'   => $user->id,
-                    'reference' => 'TEST-' . strtoupper($t['type']) . '-' . $t['days_ago'],
-                ],
-                [
-                    'type'       => $t['type'],
-                    'amount_kobo'     => $t['amount_kobo'],
-                    'status'     => $t['status'],
-                    'created_at' => now()->subDays($t['days_ago']),
-                    'updated_at' => now()->subDays($t['days_ago']),
-                ]
-            );
-        }
 
         $this->command->info('✓ Test users seeded');
         $this->command->info('  Regular → ucheoma@gmail.com / Securepass123!');
