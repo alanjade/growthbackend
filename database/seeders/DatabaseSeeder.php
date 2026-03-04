@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             LandSeeder::class,
             FaqSeeder::class,
+            TestUserSeeder::class,
         ]);
     }
 }
