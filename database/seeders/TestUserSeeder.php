@@ -56,12 +56,12 @@ class TestUserSeeder extends Seeder
 
         // Seed some transaction history
         $txns = [
-            ['type' => 'Deposit',    'amount' => 200_000_00, 'status' => 'completed', 'gateway' => 'paystack',  'days_ago' => 30],
-            ['type' => 'Deposit',    'amount' => 300_000_00, 'status' => 'completed', 'gateway' => 'monnify',   'days_ago' => 20],
-            ['type' => 'Withdrawal', 'amount' =>  50_000_00, 'status' => 'completed', 'gateway' => 'paystack',  'days_ago' => 15],
-            ['type' => 'Deposit',    'amount' => 100_000_00, 'status' => 'completed', 'gateway' => 'paystack',  'days_ago' => 10],
-            ['type' => 'Withdrawal', 'amount' =>  25_000_00, 'status' => 'pending',   'gateway' => 'monnify',   'days_ago' =>  2],
-            ['type' => 'Deposit',    'amount' =>  75_000_00, 'status' => 'failed',    'gateway' => 'paystack',  'days_ago' =>  1],
+            ['type' => 'Deposit',    'amount_kobo' => 200_000_00, 'status' => 'completed', 'gateway' => 'paystack',  'days_ago' => 30],
+            ['type' => 'Deposit',    'amount_kobo' => 300_000_00, 'status' => 'completed', 'gateway' => 'monnify',   'days_ago' => 20],
+            ['type' => 'Withdrawal', 'amount_kobo' =>  50_000_00, 'status' => 'completed', 'gateway' => 'paystack',  'days_ago' => 15],
+            ['type' => 'Deposit',    'amount_kobo' => 100_000_00, 'status' => 'completed', 'gateway' => 'paystack',  'days_ago' => 10],
+            ['type' => 'Withdrawal', 'amount_kobo' =>  25_000_00, 'status' => 'pending',   'gateway' => 'monnify',   'days_ago' =>  2],
+            ['type' => 'Deposit',    'amount_kobo' =>  75_000_00, 'status' => 'failed',    'gateway' => 'paystack',  'days_ago' =>  1],
         ];
 
         foreach ($txns as $t) {
@@ -72,7 +72,7 @@ class TestUserSeeder extends Seeder
                 ],
                 [
                     'type'       => $t['type'],
-                    'amount'     => $t['amount'],
+                    'amount_kobo'     => $t['amount_kobo'],
                     'status'     => $t['status'],
                     'gateway'    => $t['gateway'],
                     'created_at' => now()->subDays($t['days_ago']),
