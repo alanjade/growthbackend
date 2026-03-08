@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
             LandSeeder::class,
             FaqSeeder::class,
             TestUserSeeder::class,
+            NewUserSeeder::class,
         ]);
     }
 }
