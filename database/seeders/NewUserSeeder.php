@@ -33,6 +33,6 @@ class NewUserSeeder extends Seeder
         );
 
         $this->command->info('✓ Test users seeded');
-        $this->command->info('  Regular → ucheoma@gmail.com / Securepass123!');
+        $this->command->info('  Regular → sproutvest@gmaial.com / Securepass123!');
     }
 }
