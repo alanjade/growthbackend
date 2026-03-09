@@ -49,9 +49,10 @@ class LandSeeder extends Seeder
 
     public function run(): void
     {
-        // Clear existing land data
-        $this->clearExistingData();
-
+       if (Land::exists()) {
+        $this->command->info('Land data already seeded. Skipping.');
+        return;
+        }
         // Copy images from database/seeders/images/lands to storage/app/public/seed/lands
         $this->copySeederImagesToStorage();
 
